@@ -1,15 +1,24 @@
-// File: proxy/index.js
 require('dotenv').config();
 const PipecProxy = require('./PipecProxy');
 const http = require('http');
+const { Server } = require('socket.io');
 
 const proxy = new PipecProxy({
-    port: process.env.PROXY_PORT || 96,
     pipecHost: process.env.PIPEC_HOST || 'localhost',
     pipecPort: process.env.PIPEC_PORT || 1143
 });
 
-const wss = proxy.start();
+const httpServer = http.createServer();
+
+const io = new Server(httpServer, {
+    cors: { origin: '*' },
+});
+
+proxy.start(io);
+
+httpServer.listen(process.env.PROXY_PORT || 96, () => {
+    console.log(`Socket.IO proxy server listening on port ${process.env.PROXY_PORT || 96}`);
+});
 
 function startHealthCheck() {
     const healthPort = process.env.HEALTH_PORT || 3001;
@@ -36,28 +45,21 @@ function startHealthCheck() {
 
 const healthServer = startHealthCheck();
 
-process.on('SIGTERM', () => {
-    console.log('Received SIGTERM, shutting down gracefully...');
+function gracefulShutdown() {
+    console.log('Shutting down gracefully...');
     proxy.stop();
-    wss.close();
+    io.close();
     healthServer.close();
     process.exit(0);
-});
+}
 
-process.on('SIGINT', () => {
-    console.log('Received SIGINT, shutting down gracefully...');
-    proxy.stop();
-    wss.close();
-    healthServer.close();
-    process.exit(0);
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
     proxy.stop();
     process.exit(1);
 });
-
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     proxy.stop();

@@ -361,7 +361,7 @@
                 <h3>Connection</h3>
                 <div id="connectionStatus" class="connection-status disconnected">Disconnected</div>
                 <div class="form-row">
-                    <input type="text" id="serverUrl" placeholder="WebSocket Server URL" value="ws://localhost:96">
+                    <input type="text" id="serverUrl" placeholder="Socket.IO Server URL" value="http://localhost:96">
                     <button class="btn-primary" onclick="connect()">Connect</button>
                     <button onclick="disconnect()">Disconnect</button>
                 </div>
@@ -434,184 +434,182 @@
         </div>
     </div>
 
-    <script>
-        let ws = null;
-        let commandId = 1;
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    let socket = null;
+    let commandId = 1;
 
-        function generateCommandId() {
-            return `C${String(commandId++).padStart(3, '0')}`;
-        }
+    function generateCommandId() {
+        return `C${String(commandId++).padStart(3, '0')}`;
+    }
 
-        function formatJsonForDisplay(obj) {
-            return JSON.stringify(obj, null, 2);
-        }
+    function formatJsonForDisplay(obj) {
+        return JSON.stringify(obj, null, 2);
+    }
 
-        function log(message, type = 'info') {
-            const logElement = document.getElementById('log');
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.className = `log-entry log-${type}`;
-            
-            // Check if message contains JSON
-            let displayMessage = message;
-            if (message.startsWith('→ ') || message.startsWith('← ')) {
-                const prefix = message.substring(0, 2);
-                const jsonPart = message.substring(2);
-                
-                try {
-                    const parsed = JSON.parse(jsonPart);
-                    const formatted = formatJsonForDisplay(parsed);
-                    displayMessage = `${prefix}<div class="json-content">${formatted}</div>`;
-                } catch (e) {
-                    // If it's not valid JSON, keep original message
-                    displayMessage = message;
-                }
-            }
-            
-            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${displayMessage}`;
-            console.log(`[${timestamp}] ${message}`);
-            logElement.appendChild(entry);
-            logElement.scrollTop = logElement.scrollHeight;
-        }
+    function log(message, type = 'info') {
+        const logElement = document.getElementById('log');
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
 
-        function updateConnectionStatus(connected) {
-            const statusElement = document.getElementById('connectionStatus');
-            if (connected) {
-                statusElement.textContent = 'Connected';
-                statusElement.className = 'connection-status connected';
-            } else {
-                statusElement.textContent = 'Disconnected';
-                statusElement.className = 'connection-status disconnected';
-            }
-        }
+        let displayMessage = message;
+        if (message.startsWith('→ ') || message.startsWith('← ')) {
+            const prefix = message.substring(0, 2);
+            const jsonPart = message.substring(2);
 
-        function connect() {
-            const serverUrl = document.getElementById('serverUrl').value;
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                log('Already connected', 'info');
-                return;
-            }
-
-            log(`Connecting to ${serverUrl}...`, 'info');
-            ws = new WebSocket(serverUrl);
-
-            ws.onopen = function() {
-                log('Connected to WebSocket proxy', 'info');
-                updateConnectionStatus(true);
-            };
-
-            ws.onmessage = function(event) {
-                try {
-                    const response = JSON.parse(event.data);
-                    log(`← ${JSON.stringify(response)}`, 'received');
-                } catch (error) {
-                    log(`← ${event.data}`, 'received');
-                }
-            };
-
-            ws.onclose = function() {
-                log('Connection closed', 'info');
-                updateConnectionStatus(false);
-            };
-
-            ws.onerror = function(error) {
-                log(`Connection error: ${error}`, 'error');
-                updateConnectionStatus(false);
-            };
-        }
-
-        function disconnect() {
-            if (ws) {
-                ws.close();
-                ws = null;
-                updateConnectionStatus(false);
-                log('Disconnected', 'info');
-            }
-        }
-
-        function sendCommand(command, params = {}) {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                log('Not connected to server', 'error');
-                return;
-            }
-
-            const message = {
-                id: generateCommandId(),
-                command: command,
-                params: params
-            };
-
-            log(`→ ${JSON.stringify(message)}`, 'sent');
-            ws.send(JSON.stringify(message));
-        }
-
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                log('Username and password required', 'error');
-                return;
-            }
-
-            sendCommand('LOGIN', { username, password });
-        }
-
-        function listMailboxes() {
-            sendCommand('LIST');
-        }
-
-        function selectInbox() {
-            sendCommand('SELECT', { mailbox: 'INBOX' });
-        }
-
-        function fetchMessages() {
-            sendCommand('FETCH', { 
-                sequence: '1:10', 
-                items: ['UID', 'FLAGS', 'ENVELOPE', 'BODY'] 
-            });
-        }
-
-        function sendMessage() {
-            const from = document.getElementById('fromAddr').value;
-            const to = document.getElementById('toAddr').value.split(',').map(addr => addr.trim());
-            const subject = document.getElementById('subject').value;
-            const body = document.getElementById('messageBody').value;
-
-            if (!from || !to[0] || !subject || !body) {
-                log('All message fields are required', 'error');
-                return;
-            }
-
-            sendCommand('SEND', { from, to, subject, body });
-        }
-
-        function sendCustomCommand() {
-            const command = document.getElementById('commandType').value;
-            const paramsText = document.getElementById('commandParams').value;
-            
             try {
-                const params = JSON.parse(paramsText);
-                sendCommand(command, params);
-            } catch (error) {
-                log(`Invalid JSON parameters: ${error.message}`, 'error');
+                const parsed = JSON.parse(jsonPart);
+                const formatted = formatJsonForDisplay(parsed);
+                displayMessage = `${prefix}<div class="json-content">${formatted}</div>`;
+            } catch (e) {
+                displayMessage = message;
             }
         }
 
-        function logout() {
-            sendCommand('LOGOUT');
+        entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${displayMessage}`;
+        console.log(`[${timestamp}] ${message}`);
+        logElement.appendChild(entry);
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    function updateConnectionStatus(connected) {
+        const statusElement = document.getElementById('connectionStatus');
+        if (connected) {
+            statusElement.textContent = 'Connected';
+            statusElement.className = 'connection-status connected';
+        } else {
+            statusElement.textContent = 'Disconnected';
+            statusElement.className = 'connection-status disconnected';
+        }
+    }
+
+    function connect() {
+        const serverUrl = document.getElementById('serverUrl').value.replace(/^ws/, 'http');
+
+        if (socket && socket.connected) {
+            log('Already connected', 'info');
+            return;
         }
 
-        function clearLog() {
-            document.getElementById('log').innerHTML = '';
-        }
+        log(`Connecting to ${serverUrl}...`, 'info');
+        socket = io(serverUrl);
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            log('PIPEC Test Client initialized', 'info');
-            log('Click Connect to start testing', 'info');
+        socket.on('connect', () => {
+            log('Connected to Socket.IO proxy', 'info');
+            updateConnectionStatus(true);
         });
-    </script>
+
+        socket.on('pipec-response', (data) => {
+            log(`← ${JSON.stringify(data)}`, 'received');
+        });
+
+        socket.on('disconnect', () => {
+            log('Disconnected from proxy', 'info');
+            updateConnectionStatus(false);
+        });
+
+        socket.on('connect_error', (err) => {
+            log(`Connection error: ${err.message}`, 'error');
+            updateConnectionStatus(false);
+        });
+
+        socket.on('error', (err) => {
+            log(`Socket error: ${err}`, 'error');
+        });
+    }
+
+    function disconnect() {
+        if (socket) {
+            socket.disconnect();
+            socket = null;
+            updateConnectionStatus(false);
+            log('Disconnected', 'info');
+        }
+    }
+
+    function sendCommand(command, params = {}) {
+        if (!socket || !socket.connected) {
+            log('Not connected to server', 'error');
+            return;
+        }
+
+        const message = {
+            id: generateCommandId(),
+            command: command,
+            params: params
+        };
+
+        log(`→ ${JSON.stringify(message)}`, 'sent');
+        socket.emit('pipec-message', message);
+    }
+
+    function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        if (!username || !password) {
+            log('Username and password required', 'error');
+            return;
+        }
+
+        sendCommand('LOGIN', { username, password });
+    }
+
+    function listMailboxes() {
+        sendCommand('LIST');
+    }
+
+    function selectInbox() {
+        sendCommand('SELECT', { mailbox: 'INBOX' });
+    }
+
+    function fetchMessages() {
+        sendCommand('FETCH', {
+            sequence: '1:10',
+            items: ['UID', 'FLAGS', 'ENVELOPE', 'BODY']
+        });
+    }
+
+    function sendMessage() {
+        const from = document.getElementById('fromAddr').value;
+        const to = document.getElementById('toAddr').value.split(',').map(addr => addr.trim());
+        const subject = document.getElementById('subject').value;
+        const body = document.getElementById('messageBody').value;
+
+        if (!from || !to[0] || !subject || !body) {
+            log('All message fields are required', 'error');
+            return;
+        }
+
+        sendCommand('SEND', { from, to, subject, body });
+    }
+
+    function sendCustomCommand() {
+        const command = document.getElementById('commandType').value;
+        const paramsText = document.getElementById('commandParams').value;
+
+        try {
+            const params = JSON.parse(paramsText);
+            sendCommand(command, params);
+        } catch (error) {
+            log(`Invalid JSON parameters: ${error.message}`, 'error');
+        }
+    }
+
+    function logout() {
+        sendCommand('LOGOUT');
+    }
+
+    function clearLog() {
+        document.getElementById('log').innerHTML = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        log('PIPEC Test Client initialized', 'info');
+        log('Click Connect to start testing', 'info');
+    });
+</script>
+
 </body>
 </html>
