@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIPEC WebSocket Test Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            color: #e4e4e7;
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #111111;
+            border-radius: 12px;
+            padding: 32px;
+            border: 1px solid #27272a;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+        
+        h1 {
+            color: #fafafa;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .section {
+            background: #18181b;
+            border-radius: 8px;
+            padding: 24px;
+            border: 1px solid #27272a;
+            transition: border-color 0.2s ease;
+        }
+        
+        .section:hover {
+            border-color: #3f3f46;
+        }
+        
+        .section h3 {
+            margin-bottom: 16px;
+            color: #fafafa;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.9;
+        }
+        
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+        
+        .connection-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        
+        .connected {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        
+        .connected::before {
+            background: #22c55e;
+        }
+        
+        .disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .disconnected::before {
+            background: #ef4444;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+        
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0a0a0a;
+            border: 1px solid #27272a;
+            border-radius: 6px;
+            color: #e4e4e7;
+            font-size: 0.875rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        
+        input::placeholder, textarea::placeholder {
+            color: #71717a;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #52525b;
+            background: #000000;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+        
+        button {
+            padding: 12px 20px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 6px;
+            color: #e4e4e7;
+            font-size: 0.875rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        button:hover {
+            background: #27272a;
+            border-color: #3f3f46;
+        }
+        
+        button:active {
+            background: #0a0a0a;
+        }
+        
+        .btn-primary {
+            background: #fafafa;
+            color: #0a0a0a;
+            border-color: #fafafa;
+        }
+        
+        .btn-primary:hover {
+            background: #e4e4e7;
+            border-color: #e4e4e7;
+        }
+        
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        .command-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+        
+        .command-buttons button {
+            padding: 12px 16px;
+            font-size: 0.875rem;
+            width: 100%;
+        }
+        
+        .log-container {
+            position: relative;
+        }
+        
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .log {
+            background: #000000;
+            border: 1px solid #18181b;
+            border-radius: 6px;
+            padding: 16px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.4;
+        }
+        
+        .log::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .log::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 3px;
+        }
+        
+        .log::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        
+        .log-timestamp {
+            color: #71717a;
+            font-size: 0.75rem;
+        }
+        
+        .log-sent { 
+            color: #a3a3a3;
+        }
+        
+        .log-received { 
+            color: #d4d4d8;
+        }
+        
+        .log-error { 
+            color: #ef4444;
+        }
+        
+        .log-info { 
+            color: #71717a;
+        }
+        
+        .json-content {
+            white-space: pre-wrap;
+            margin-left: 16px;
+            margin-top: 4px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.75rem;
+            line-height: 1.3;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .command-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-row-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .command-buttons {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .log {
+                height: 300px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .command-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* Selection styling */
+        ::selection {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Focus visible for accessibility */
+        button:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible {
+            outline: 2px solid #52525b;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PIPEC WebSocket Test Client</h1>
+        
+        <div class="grid">
+            <div class="section full-width">
+                <h3>Connection</h3>
+                <div id="connectionStatus" class="connection-status disconnected">Disconnected</div>
+                <div class="form-row">
+                    <input type="text" id="serverUrl" placeholder="WebSocket Server URL" value="ws://localhost:96">
+                    <button class="btn-primary" onclick="connect()">Connect</button>
+                    <button onclick="disconnect()">Disconnect</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Authentication</h3>
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Username" value="testuser">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="Password" value="password123">
+                </div>
+                <button class="btn-primary" onclick="login()">Login</button>
+            </div>
+
+            <div class="section">
+                <h3>Quick Commands</h3>
+                <div class="command-buttons">
+                    <button onclick="listMailboxes()">List Mailboxes</button>
+                    <button onclick="selectInbox()">Select INBOX</button>
+                    <button onclick="fetchMessages()">Fetch Messages</button>
+                    <button class="btn-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="section full-width">
+                <h3>Send Message</h3>
+                <div class="form-row-2">
+                    <input type="email" id="fromAddr" placeholder="From Address" value="testuser@pipec.local">
+                    <input type="email" id="toAddr" placeholder="To Address" value="recipient@example.com">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="subject" placeholder="Subject" value="Test Message">
+                </div>
+                <div class="form-group">
+                    <textarea id="messageBody" placeholder="Message Body" rows="4">Hello, this is a test message from the PIPEC client!</textarea>
+                </div>
+                <button class="btn-primary" onclick="sendMessage()">Send Message</button>
+            </div>
+
+            <div class="section full-width">
+                <h3>Custom Command</h3>
+                <div class="form-row-2">
+                    <select id="commandType">
+                        <option value="LOGIN">LOGIN</option>
+                        <option value="LIST">LIST</option>
+                        <option value="SELECT">SELECT</option>
+                        <option value="FETCH">FETCH</option>
+                        <option value="SEND">SEND</option>
+                        <option value="STORE">STORE</option>
+                        <option value="LOGOUT">LOGOUT</option>
+                    </select>
+                    <button class="btn-primary" onclick="sendCustomCommand()">Send Command</button>
+                </div>
+                <div class="form-group">
+                    <textarea id="commandParams" placeholder="Command Parameters (JSON)" rows="4">{}</textarea>
+                </div>
+            </div>
+
+            <div class="section full-width">
+                <div class="log-header">
+                    <h3>Communication Log</h3>
+                    <button onclick="clearLog()">Clear Log</button>
+                </div>
+                <div class="log-container">
+                    <div id="log" class="log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let commandId = 1;
+
+        function generateCommandId() {
+            return `C${String(commandId++).padStart(3, '0')}`;
+        }
+
+        function formatJsonForDisplay(obj) {
+            return JSON.stringify(obj, null, 2);
+        }
+
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            
+            // Check if message contains JSON
+            let displayMessage = message;
+            if (message.startsWith('→ ') || message.startsWith('← ')) {
+                const prefix = message.substring(0, 2);
+                const jsonPart = message.substring(2);
+                
+                try {
+                    const parsed = JSON.parse(jsonPart);
+                    const formatted = formatJsonForDisplay(parsed);
+                    displayMessage = `${prefix}<div class="json-content">${formatted}</div>`;
+                } catch (e) {
+                    // If it's not valid JSON, keep original message
+                    displayMessage = message;
+                }
+            }
+            
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${displayMessage}`;
+            console.log(`[${timestamp}] ${message}`);
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = 'Connected';
+                statusElement.className = 'connection-status connected';
+            } else {
+                statusElement.textContent = 'Disconnected';
+                statusElement.className = 'connection-status disconnected';
+            }
+        }
+
+        function connect() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Already connected', 'info');
+                return;
+            }
+
+            log(`Connecting to ${serverUrl}...`, 'info');
+            ws = new WebSocket(serverUrl);
+
+            ws.onopen = function() {
+                log('Connected to WebSocket proxy', 'info');
+                updateConnectionStatus(true);
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const response = JSON.parse(event.data);
+                    log(`← ${JSON.stringify(response)}`, 'received');
+                } catch (error) {
+                    log(`← ${event.data}`, 'received');
+                }
+            };
+
+            ws.onclose = function() {
+                log('Connection closed', 'info');
+                updateConnectionStatus(false);
+            };
+
+            ws.onerror = function(error) {
+                log(`Connection error: ${error}`, 'error');
+                updateConnectionStatus(false);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                updateConnectionStatus(false);
+                log('Disconnected', 'info');
+            }
+        }
+
+        function sendCommand(command, params = {}) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('Not connected to server', 'error');
+                return;
+            }
+
+            const message = {
+                id: generateCommandId(),
+                command: command,
+                params: params
+            };
+
+            log(`→ ${JSON.stringify(message)}`, 'sent');
+            ws.send(JSON.stringify(message));
+        }
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                log('Username and password required', 'error');
+                return;
+            }
+
+            sendCommand('LOGIN', { username, password });
+        }
+
+        function listMailboxes() {
+            sendCommand('LIST');
+        }
+
+        function selectInbox() {
+            sendCommand('SELECT', { mailbox: 'INBOX' });
+        }
+
+        function fetchMessages() {
+            sendCommand('FETCH', { 
+                sequence: '1:10', 
+                items: ['UID', 'FLAGS', 'ENVELOPE', 'BODY'] 
+            });
+        }
+
+        function sendMessage() {
+            const from = document.getElementById('fromAddr').value;
+            const to = document.getElementById('toAddr').value.split(',').map(addr => addr.trim());
+            const subject = document.getElementById('subject').value;
+            const body = document.getElementById('messageBody').value;
+
+            if (!from || !to[0] || !subject || !body) {
+                log('All message fields are required', 'error');
+                return;
+            }
+
+            sendCommand('SEND', { from, to, subject, body });
+        }
+
+        function sendCustomCommand() {
+            const command = document.getElementById('commandType').value;
+            const paramsText = document.getElementById('commandParams').value;
+            
+            try {
+                const params = JSON.parse(paramsText);
+                sendCommand(command, params);
+            } catch (error) {
+                log(`Invalid JSON parameters: ${error.message}`, 'error');
+            }
+        }
+
+        function logout() {
+            sendCommand('LOGOUT');
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('PIPEC Test Client initialized', 'info');
+            log('Click Connect to start testing', 'info');
+        });
+    </script>
+</body>
+</html>
