@@ -1,0 +1,14 @@
+# Base development image with air for hot reload
+FROM golang:1.24-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache git curl
+
+# Install air
+RUN go install github.com/air-verse/air@latest
+# Copy source code and config
+COPY . .
+
+# Use air as the entrypoint
+CMD ["air"]

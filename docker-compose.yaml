@@ -20,7 +20,7 @@ services:
     pipec-backend:
         build:
             context: ./backend
-            dockerfile: DockerFile
+            dockerfile: DockerFile.dev
         container_name: pipec-backend
         environment:
             DATABASE_URL: postgres://postgres:shasha@postgres:5432/pipec?sslmode=disable
@@ -37,7 +37,7 @@ services:
     websocket-proxy:
         build:
             context: ./proxy
-            dockerfile: DockerFile
+            dockerfile: DockerFile.dev
         container_name: pipec-proxy
         environment:
             PIPEC_HOST: pipec-backend

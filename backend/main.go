@@ -4,9 +4,11 @@ import (
 	"log"
 	"os"
 	"pipec-backend/db"
+	"pipec-backend/models"
 	"pipec-backend/server"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -22,28 +24,63 @@ func main() {
 	}
 
 	// Initialize database
-	db, err := db.InitDB(dbURL)
+	database, err := db.InitDB(dbURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+
+	// Get underlying SQL DB for closing connection
+	sqlDB, err := database.DB()
+	if err != nil {
+		log.Fatalf("Failed to get underlying SQL DB: %v", err)
+	}
+	defer sqlDB.Close()
 
 	// Create default user and mailboxes for testing
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-	var userID int
-	db.QueryRow(`INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) 
-				 ON CONFLICT (username) DO UPDATE SET email=EXCLUDED.email 
-				 RETURNING id`,
-		"testuser", "test@pipec.local", string(hashedPassword)).Scan(&userID)
-
-	// Create default mailboxes
-	defaultMailboxes := []string{"INBOX", "SENT", "DRAFTS", "TRASH"}
-	for _, mbox := range defaultMailboxes {
-		db.Exec(`INSERT INTO mailboxes (user_id, name) VALUES ($1, $2) ON CONFLICT (user_id, name) DO NOTHING`,
-			userID, mbox)
+	err = createDefaultData(database)
+	if err != nil {
+		log.Printf("Warning: Failed to create default data: %v", err)
 	}
 
 	// Start server
-	server := server.NewPipeCServer(db, port)
+	server := server.NewPipeCServer(database, port)
 	log.Fatal(server.Start())
+}
+
+func createDefaultData(db *gorm.DB) error {
+	// Create default user
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user := models.User{
+		Username:     "testuser",
+		Email:        "test@pipec.local",
+		PasswordHash: string(hashedPassword),
+	}
+
+	// Use FirstOrCreate to avoid duplicates
+	err = db.Where("username = ?", user.Username).FirstOrCreate(&user).Error
+	if err != nil {
+		return err
+	}
+
+	// Create default mailboxes
+	defaultMailboxes := []string{"INBOX", "SENT", "DRAFTS", "TRASH"}
+	for _, mboxName := range defaultMailboxes {
+		mailbox := models.Mailbox{
+			UserID: user.ID,
+			Name:   mboxName,
+		}
+
+		// Use FirstOrCreate to avoid duplicates
+		err = db.Where("user_id = ? AND name = ?", user.ID, mboxName).FirstOrCreate(&mailbox).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Default user 'testuser' created/updated with mailboxes: %v", defaultMailboxes)
+	return nil
 }

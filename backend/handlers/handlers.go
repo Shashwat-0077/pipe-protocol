@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"database/sql"
 	"pipec-backend/models"
 	"pipec-backend/types"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 type SendResponseFunc func(client *types.Client, resp models.Response)
 
-func HandleCommand(db *sql.DB, client *types.Client, cmd *models.Command, send SendResponseFunc) {
+func HandleCommand(db *gorm.DB, client *types.Client, cmd *models.Command, send SendResponseFunc) {
 	switch strings.ToUpper(cmd.Command) {
 	case "LOGIN":
 		handleLogin(db, client, cmd, send)

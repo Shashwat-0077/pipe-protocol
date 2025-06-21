@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"database/sql"
-	"encoding/json"
 	"pipec-backend/models"
 	"pipec-backend/types"
 	"strconv"
+
+	"gorm.io/gorm"
 )
 
-func handleStore(db *sql.DB, client *types.Client, cmd *models.Command, send SendResponseFunc) {
+func handleStore(db *gorm.DB, client *types.Client, cmd *models.Command, send SendResponseFunc) {
 	if client.State != types.StateSelected {
 		send(client, models.Response{ID: cmd.ID, Status: "NO", Message: "No mailbox selected"})
 		return
@@ -33,11 +33,23 @@ func handleStore(db *sql.DB, client *types.Client, cmd *models.Command, send Sen
 		}
 	}
 
-	flagsJSON, _ := json.Marshal(flags)
 	msgNum, _ := strconv.Atoi(sequence)
 
-	_, err := db.Exec(`UPDATE messages SET flags = $1 WHERE mailbox_id = $2 AND id = (
-		SELECT id FROM messages WHERE mailbox_id = $2 ORDER BY id LIMIT 1 OFFSET $3)`, flagsJSON, client.SelectedMboxID, msgNum-1)
+	// Find the message at the specified sequence number
+	var message models.Message
+	err := db.Where("mailbox_id = ?", client.SelectedMboxID).
+		Order("id").
+		Offset(msgNum - 1).
+		Limit(1).
+		First(&message).Error
+
+	if err != nil {
+		send(client, models.Response{ID: cmd.ID, Status: "NO", Message: "Message not found"})
+		return
+	}
+
+	// Update the flags
+	err = db.Model(&message).Update("flags", models.JSON(flags)).Error
 	if err != nil {
 		send(client, models.Response{ID: cmd.ID, Status: "NO", Message: "Failed to store flags"})
 		return
