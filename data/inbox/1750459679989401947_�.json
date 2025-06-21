@@ -1,0 +1,15 @@
+{
+  "id": "�",
+  "from": "alice@remote.com",
+  "to": [
+    "bob@pipe.local"
+  ],
+  "subject": "Hello Bob",
+  "body": "This is a test message from Alice",
+  "headers": {
+    "date": "2024-01-01T12:00:00Z",
+    "message-id": "\u003ctest@client.local\u003e"
+  },
+  "received": "2025-06-21T04:17:59.989400062+05:30",
+  "status": "received"
+}

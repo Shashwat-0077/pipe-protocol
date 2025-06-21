@@ -1,0 +1,15 @@
+{
+  "id": "�",
+  "from": "charlie@external.com",
+  "to": [
+    "alice@pipe.local"
+  ],
+  "subject": "Group Message",
+  "body": "Hello everyone!",
+  "headers": {
+    "date": "2024-01-01T12:00:00Z",
+    "message-id": "\u003ctest@client.local\u003e"
+  },
+  "received": "2025-06-21T04:17:59.993243863+05:30",
+  "status": "received"
+}

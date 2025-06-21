@@ -1,0 +1,15 @@
+{
+  "id": "�",
+  "from": "system@pipe.local",
+  "to": [
+    "admin@pipe.local"
+  ],
+  "subject": "System Alert",
+  "body": "System is running normally",
+  "headers": {
+    "date": "2024-01-01T12:00:00Z",
+    "message-id": "\u003ctest@client.local\u003e"
+  },
+  "received": "2025-06-21T04:17:59.99714298+05:30",
+  "status": "received"
+}
