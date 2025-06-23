@@ -20,7 +20,15 @@ class PipecProxy {
                 try {
                     const connection = await this.getOrCreateConnection(clientId, socket);
                     connection.lastActivity = Date.now();
-                    connection.socket.write(JSON.stringify(data) + '\n');
+
+                    const enrichedData = {
+                        ...data,
+                        connection_type: 'client'
+                    };
+
+                    console.log(`Handling message for ${clientId}:`, enrichedData);
+
+                    connection.socket.write(JSON.stringify(enrichedData) + '\n');
                 } catch (error) {
                     console.error(`Error handling message for ${clientId}:`, error);
                     this.sendError(socket, 'Internal server error');
@@ -44,7 +52,6 @@ class PipecProxy {
     async getOrCreateConnection(clientId, socket) {
         let connection = this.connections.get(clientId);
         if (connection) {
-            // Update last activity when reusing existing connection
             connection.lastActivity = Date.now();
             return connection;
         }
@@ -70,7 +77,7 @@ class PipecProxy {
                     socket: socketToPipec,
                     lastActivity: Date.now(),
                     socketio: socket,
-                    clientId: clientId // Store clientId for reference
+                    clientId
                 };
 
                 socketToPipec.on('data', (data) => {
@@ -83,11 +90,9 @@ class PipecProxy {
                             try {
                                 const response = JSON.parse(line);
                                 const currentConn = this.connections.get(clientId);
-                                if (currentConn) {
+                                if (currentConn && currentConn.socketio?.connected) {
                                     currentConn.lastActivity = Date.now();
-                                    if (currentConn.socketio && currentConn.socketio.connected) {
-                                        currentConn.socketio.emit('pipec-response', response);
-                                    }
+                                    currentConn.socketio.emit('pipec-response', response);
                                 }
                             } catch (err) {
                                 console.error(`Failed to parse PIPEC response for ${clientId}:`, err);
@@ -143,33 +148,25 @@ class PipecProxy {
     startCleanupTimer() {
         this.cleanupInterval = setInterval(() => {
             const now = Date.now();
-            const idleTimeout = 30 * 1000; // 30 seconds
+            const idleTimeout = 30 * 1000;
             const connectionsToClose = [];
 
-            // First, collect connections that need to be closed
             for (const [clientId, conn] of this.connections.entries()) {
                 const timeSinceLastActivity = now - conn.lastActivity;
-                
-                // Check if connection is idle or if socket.io client is disconnected
-                if (timeSinceLastActivity > idleTimeout || 
-                    !conn.socketio || 
-                    !conn.socketio.connected) {
-                    
+                if (timeSinceLastActivity > idleTimeout || !conn.socketio?.connected) {
                     connectionsToClose.push(clientId);
                     console.log(`Marking connection ${clientId} for cleanup - idle for ${Math.floor(timeSinceLastActivity / 1000)}s, socket.io connected: ${conn.socketio?.connected || false}`);
                 }
             }
 
-            // Then close them
             for (const clientId of connectionsToClose) {
                 this.closeConnection(clientId);
             }
 
-            // Log connection count periodically (every 5 minutes instead of every 10 seconds)
             if (Math.floor(now / 1000) % 300 === 0) {
                 console.log(`Active connections: ${this.connections.size}`);
             }
-        }, 10 * 1000); // check every 10 seconds
+        }, 10 * 1000);
     }
 
     stop() {
@@ -177,13 +174,11 @@ class PipecProxy {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;
         }
-        
-        // Close all connections
-        const clientIds = Array.from(this.connections.keys());
-        for (const clientId of clientIds) {
+
+        for (const clientId of this.connections.keys()) {
             this.closeConnection(clientId);
         }
-        
+
         console.log('Socket.IO proxy server stopped');
     }
 }
