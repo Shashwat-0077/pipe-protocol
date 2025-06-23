@@ -27,7 +27,7 @@ func HandleCommand(db *gorm.DB, client *types.Client, cmd *models.Command, send 
 		handleLogout(db, client, cmd, send)
 
 	default:
-		send(client.Conn, models.Response{ID: cmd.ID, Status: "BAD", Message: "Unknown command"})
+		send(client.Conn, models.Response{ID: cmd.ID, Status: "BAD", Message: "Unknown command for client"})
 	}
 }
 

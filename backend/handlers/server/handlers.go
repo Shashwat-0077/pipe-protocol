@@ -19,10 +19,10 @@ func HandleCommand(db *gorm.DB, rc *types.RemoteClient, cmd *models.Command, sen
 		handleRcptTo(db, rc, cmd, send)
 	case "DATA":
 		handleData(db, rc, cmd, send)
-	case "Quit":
+	case "QUIT":
 		handleQuit(db, rc, cmd, send)
 
 	default:
-		send(rc.Conn, models.Response{ID: cmd.ID, Status: "BAD", Message: "Unknown command"})
+		send(rc.Conn, models.Response{ID: cmd.ID, Status: "BAD", Message: "Unknown command for server"})
 	}
 }

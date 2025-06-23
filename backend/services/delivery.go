@@ -73,6 +73,7 @@ func SendMailToRemoteServer(db *gorm.DB, client *types.Client, cmd *models.Comma
 
 	// Get the best PIPE server for the domain
 	connectResult, err := QuickConnect(domain)
+
 	if err != nil {
 		// If connection fails, all emails for this domain fail
 		for _, email := range emails {
@@ -208,6 +209,8 @@ func sendCommandAndWaitForAck(conn net.Conn, reader *bufio.Reader, cmd models.Co
 	if err != nil {
 		return false
 	}
+
+	fmt.Printf("Received response for command %s: %s\n", cmd.Command, response.Message)
 
 	// Check if the response ID matches the command ID
 	if response.ID != cmd.ID {

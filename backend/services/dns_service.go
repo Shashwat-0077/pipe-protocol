@@ -52,6 +52,7 @@ func (sr *ServerResolver) LookupPIPESRVRecords(domain string) ([]ServerInfo, err
 	defer cancel()
 
 	// Look for _pipe._tcp.domain SRV records
+
 	_, srvRecords, err := net.DefaultResolver.LookupSRV(ctx, "pipe", "tcp", domain)
 	if err != nil {
 		return nil, fmt.Errorf("PIPE SRV lookup failed for %s: %w", domain, err)
