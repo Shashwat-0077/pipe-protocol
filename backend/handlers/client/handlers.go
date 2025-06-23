@@ -8,9 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-type SendResponseFunc func(client *types.Client, resp models.Response)
+func HandleCommand(db *gorm.DB, client *types.Client, cmd *models.Command, send types.SendResponseFunc, localDomain string) {
 
-func HandleCommand(db *gorm.DB, client *types.Client, cmd *models.Command, send SendResponseFunc) {
 	switch strings.ToUpper(cmd.Command) {
 	case "LOGIN":
 		handleLogin(db, client, cmd, send)
@@ -21,12 +20,17 @@ func HandleCommand(db *gorm.DB, client *types.Client, cmd *models.Command, send 
 	case "FETCH":
 		handleFetch(db, client, cmd, send)
 	case "SEND":
-		handleSend(db, client, cmd, send)
+		handleSend(db, client, cmd, send, localDomain)
 	case "STORE":
 		handleStore(db, client, cmd, send)
 	case "LOGOUT":
 		handleLogout(db, client, cmd, send)
+
 	default:
-		send(client, models.Response{ID: cmd.ID, Status: "BAD", Message: "Unknown command"})
+		send(client.Conn, models.Response{ID: cmd.ID, Status: "BAD", Message: "Unknown command"})
 	}
+}
+
+func isAuthenticated(client *types.Client) bool {
+	return client.State == types.StateAuthenticated
 }

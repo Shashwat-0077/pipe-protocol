@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"pipec-backend/db"
+	"pipec-backend/config"
 	"pipec-backend/models"
 	"pipec-backend/server"
 
@@ -24,7 +24,7 @@ func main() {
 	}
 
 	// Initialize database
-	database, err := db.InitDB(dbURL)
+	database, err := config.ConnectDatabase(dbURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
@@ -36,7 +36,7 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	// Create default user and mailboxes for testing
+	// Create default user and folder for testing
 	err = createDefaultData(database)
 	if err != nil {
 		log.Printf("Warning: Failed to create default data: %v", err)
@@ -55,9 +55,9 @@ func createDefaultData(db *gorm.DB) error {
 	}
 
 	user := models.User{
-		Username:     "testuser",
-		Email:        "test@pipec.local",
-		PasswordHash: string(hashedPassword),
+		Username: "testuser",
+		Email:    "test|pipec.local",
+		Password: string(hashedPassword),
 	}
 
 	// Use FirstOrCreate to avoid duplicates
@@ -66,21 +66,21 @@ func createDefaultData(db *gorm.DB) error {
 		return err
 	}
 
-	// Create default mailboxes
-	defaultMailboxes := []string{"INBOX", "SENT", "DRAFTS", "TRASH"}
-	for _, mboxName := range defaultMailboxes {
-		mailbox := models.Mailbox{
+	// Create default folder
+	defaultFolders := []string{"INBOX", "SENT", "DRAFTS", "TRASH"}
+	for _, mboxName := range defaultFolders {
+		folder := models.Folder{
 			UserID: user.ID,
 			Name:   mboxName,
 		}
 
 		// Use FirstOrCreate to avoid duplicates
-		err = db.Where("user_id = ? AND name = ?", user.ID, mboxName).FirstOrCreate(&mailbox).Error
+		err = db.Where("user_id = ? AND name = ?", user.ID, mboxName).FirstOrCreate(&folder).Error
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Printf("Default user 'testuser' created/updated with mailboxes: %v", defaultMailboxes)
+	log.Printf("Default user 'testuser' created/updated with folders: %v", defaultFolders)
 	return nil
 }

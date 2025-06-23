@@ -1,4 +1,4 @@
-package db
+package config
 
 import (
 	"pipec-backend/models"
@@ -7,9 +7,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// Database initialization
-func InitDB(dbURL string) (*gorm.DB, error) {
+func ConnectDatabase(dbURL string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+
 	if err != nil {
 		return nil, err
 	}
@@ -17,8 +17,9 @@ func InitDB(dbURL string) (*gorm.DB, error) {
 	// Auto-migrate the schema
 	err = db.AutoMigrate(
 		&models.User{},
-		&models.Mailbox{},
+		&models.Folder{},
 		&models.Message{},
+		&models.Attachment{},
 	)
 	if err != nil {
 		return nil, err
